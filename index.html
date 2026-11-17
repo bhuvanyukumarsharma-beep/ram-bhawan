@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f4c4a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Ram Bhawan" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon-192.png" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
+    <title>Ram Bhawan</title>
+    <script>
+      // Puts on the theme chosen on this phone BEFORE the page is drawn, so the wrong colours never flash.
+      // (The list is theme name -> colour of the top bar; the same values are in src/lib/theme.ts and styles.css.)
+      (function () {
+        var c = { classic:'#0f4c4a', dark:'#1b6360', ocean:'#0b4a85', sand:'#6b4423', violet:'#4f3396' }, t = 'classic';
+        try { t = localStorage.getItem('rb_theme') || 'classic'; } catch (e) { /* private mode */ }
+        if (!c[t]) t = 'classic';
+        document.documentElement.setAttribute('data-theme', t);
+        var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', c[t]);
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index-uVMKfpOx.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BbmeFj76.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="./config.js"></script>
+  </body>
+</html>

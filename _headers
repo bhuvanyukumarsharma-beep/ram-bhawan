@@ -1,0 +1,6 @@
+# Lets the update helper (a page on the owner's own computer) read config.js from the live app,
+# so a later update can keep the same three values without asking the owner to copy them.
+# config.js holds only PUBLIC values (project address, publishable key, phone-alert public key).
+/config.js
+  Access-Control-Allow-Origin: *
+  Cache-Control: no-cache
