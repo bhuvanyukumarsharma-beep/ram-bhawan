@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ram Bhawan setup helper</title>
+<style>
+  :root{--ink:#1d2433;--muted:#667085;--line:#e4dfd3;--brand:#0f4c4a;--bg:#f6f3ec;--card:#fff;--soft:#e6f0ef;--code:#fafafa}
+  @media (prefers-color-scheme: dark){:root{--ink:#e8ebf0;--muted:#a3acb9;--line:#39414f;--brand:#3aa39d;--bg:#12161c;--card:#1b212b;--soft:#1f3532;--code:#151a22}}
+  *{box-sizing:border-box}
+  body{font:17px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:780px;margin:0 auto;padding:20px 16px 80px;background:var(--bg);color:var(--ink)}
+  h1{font-size:27px;margin:.2em 0}h2{font-size:20px;margin:0 0 6px}
+  .card{background:var(--card);border-radius:14px;padding:16px;margin:16px 0;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 16px;background:var(--brand);color:#fff;cursor:pointer;min-height:46px}
+  button.soft{background:var(--soft);color:var(--brand)}
+  button.tiny{min-height:34px;padding:4px 12px;font-size:14px}
+  label{display:block;font-weight:700;margin-top:14px}
+  .hint{font-size:14px;color:var(--muted);font-weight:400}
+  input,textarea{width:100%;font:inherit;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+  textarea{font:14px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--code);resize:vertical}
+  .row{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}.row>textarea{flex:1;min-width:220px}
+  .warn{background:#fdecc8;color:#6b3f00;border-radius:12px;padding:12px 14px;font-size:15px;margin-top:12px}
+  .err{background:#fde3df;color:#b42318;border-radius:12px;padding:12px 14px;margin-top:14px;display:none;font-weight:600}
+  .out{display:none}.badge{display:inline-block;background:var(--brand);color:#fff;border-radius:99px;padding:2px 10px;font-size:14px;margin-right:6px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:560px){.two{grid-template-columns:1fr}}
+  table{width:100%;border-collapse:collapse;margin-top:10px}td{padding:6px 4px;border-top:1px solid var(--line);vertical-align:middle}
+  td code{font:13px/1.35 ui-monospace,Menlo,Consolas,monospace;word-break:break-all}td.n{white-space:nowrap}
+  details{margin-top:12px}summary{cursor:pointer;font-weight:700}
+</style>
+</head>
+<body>
+<h1>Ram Bhawan setup helper</h1>
+<p>This page does the fiddly typing for you, so you only copy and paste. <b>Everything happens inside this page, on your own computer. Nothing you type here is sent anywhere.</b></p>
+
+<form id="f" class="card" autocomplete="off">
+  <h2>A. Your Supabase details</h2>
+  <p class="hint">From your Supabase project (guide, Step 1): the Project URL, and the <b>publishable</b> key. Never the "secret" key.</p>
+  <label for="url">Project URL</label>
+  <input id="url" placeholder="https://abcdefghijklmnopqrst.supabase.co" spellcheck="false" autocapitalize="none" required>
+  <label for="key">Publishable key <span class="hint">(starts with sb_publishable_ &mdash; or, on older projects, the "anon public" key starting with eyJ)</span></label>
+  <input id="key" spellcheck="false" autocapitalize="none" required>
+
+  <h2 style="margin-top:22px">B. Email sending (recommended)</h2>
+  <p class="hint">A Gmail address that will send the emails, and its 16-letter app password (guide, Step 2). Leave both empty to skip emails and use phone alerts only.</p>
+  <div class="two">
+    <div><label for="gmail">Gmail address</label><input id="gmail" type="email" placeholder="myapp.rentmail@gmail.com" spellcheck="false" autocapitalize="none"></div>
+    <div><label for="gpass">Gmail app password</label><input id="gpass" placeholder="abcd efgh ijkl mnop" spellcheck="false" autocapitalize="none"></div>
+  </div>
+
+  <h2 style="margin-top:22px">C. Your own login for the app (you are the owner)</h2>
+  <div class="two">
+    <div><label for="oid">Your login ID <span class="hint">(letters and numbers, no spaces)</span></label><input id="oid" value="owner" autocapitalize="none" spellcheck="false" required></div>
+    <div><label for="oname">Your name</label><input id="oname" placeholder="Your full name" required></div>
+  </div>
+  <div class="two">
+    <div><label for="oemail">Your email <span class="hint">(your alerts are sent here)</span></label><input id="oemail" type="email" autocapitalize="none" spellcheck="false" required></div>
+    <div><label for="opass">Your password <span class="hint">(at least 8 characters, not only numbers)</span></label><input id="opass" autocapitalize="none" spellcheck="false" required></div>
+  </div>
+  <div class="err" id="err" role="alert"></div>
+  <p style="margin-top:18px"><button type="submit">Make my files</button></p>
+</form>
+
+<div id="out" class="out">
+  <div class="card"><h2><span class="badge">1</span>Secrets for Supabase</h2>
+    <p>Goes in Supabase &rarr; Edge Functions &rarr; Secrets (guide, Step 6). Press <b>Copy all lines</b>, then paste into the first box. If Supabase puts everything into one box, use the little table below instead: one Copy button for each name and each value.</p>
+    <div class="row"><textarea id="o-secrets" rows="7" readonly></textarea><button type="button" class="soft" data-copy="o-secrets">Copy all lines</button></div>
+    <details><summary>Table with one Copy button per item</summary><table id="secret-table"></table></details></div>
+  <div class="card"><h2><span class="badge">2</span>Your owner command</h2>
+    <p>Paste into Supabase &rarr; SQL Editor and press Run (guide, Step 4, after the database is built).</p>
+    <div class="row"><textarea id="o-owner" rows="3" readonly></textarea><button type="button" class="soft" data-copy="o-owner">Copy</button></div></div>
+  <div class="card"><h2><span class="badge">3</span>Schedule command</h2>
+    <p>Paste into Supabase &rarr; SQL Editor and press Run (guide, Step 7).</p>
+    <div class="row"><textarea id="o-sched" rows="10" readonly></textarea><button type="button" class="soft" data-copy="o-sched">Copy</button></div></div>
+  <div class="card"><h2><span class="badge">4</span>Your website file</h2>
+    <p>This is the whole app, already connected to your database. You upload it to Netlify (guide, Step 8). Do not open the zip file. Just drag it as it is.</p>
+    <p><button type="button" id="dl-site">Download ram-bhawan-website.zip</button></p></div>
+  <div class="card"><h2><span class="badge">5</span>Keep a private copy of everything</h2>
+    <p><button type="button" id="dl-secrets">Download YOUR-SECRETS.txt</button></p>
+    <div class="warn">YOUR-SECRETS.txt holds your passwords. Keep it private, like a bank PIN: do not email it and do not share it. <b>If you close this page before saving it, you will have to make new keys, and then repeat Steps 6, 7 and 8.</b></div></div>
+</div>
+
+<script>
+const SCHEDULE_TEMPLATE = __SCHEDULE_SQL__;
+const SITE_FILES = __SITE_FILES__;   // the finished app, as {file name: base64}; config.js is replaced below
+const $ = (id) => document.getElementById(id);
+const b64u = (u8) => btoa(String.fromCharCode(...u8)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const sq = (s) => "'" + String(s).replace(/'/g, "''") + "'";
+let keys = null, made = null, saved = false;
+
+function fail(msg) { const e = $('err'); e.textContent = msg; e.style.display = 'block'; e.scrollIntoView({ block: 'center' }); }
+// Accepts the full web address, or just the 20 letters before ".supabase.co".
+function projectRef(text) {
+  const t = text.trim().replace(/\/+$/, '');
+  const m = t.match(/^(?:https?:\/\/)?([a-z0-9]{8,40})(?:\.supabase\.co)?(?:\/.*)?$/i);
+  return m && (/\.supabase\.co/i.test(t) || /^[a-z0-9]{20}$/i.test(t)) ? m[1].toLowerCase() : null;
+}
+function checkKey(k) {
+  if (/^sb_secret_/i.test(k)) return 'That is the SECRET key. Never use it here: anyone who gets it can read and change all your data. Use the PUBLISHABLE key (starts with sb_publishable_).';
+  if (/^sb_publishable_/i.test(k)) return null;
+  if (/^eyJ/.test(k)) {
+    try { const p = JSON.parse(atob(k.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); if (p.role === 'service_role') return 'That is the service_role (secret) key. Never use it here. Use the "anon public" key instead, or the publishable key.'; if (p.role !== 'anon') return 'That key is not the public one. Use the publishable key, or the "anon public" key.'; return null; }
+    catch (e) { return 'That does not look like a complete key. Copy it again.'; }
+  }
+  return 'That does not look like a Supabase key. A publishable key starts with sb_publishable_.';
+}
+
+async function makeKeys() {
+  const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const pub = new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey));
+  const jwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+  const rnd = crypto.getRandomValues(new Uint8Array(24));
+  return { pub: b64u(pub), priv: jwk.d, cron: Array.from(rnd, (b) => b.toString(16).padStart(2, '0')).join('') };
+}
+
+// ---- a tiny zip writer (files are stored, not compressed), so the website can be built right here
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = (u8) => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function makeZip(files) {
+  const enc = new TextEncoder(), parts = [], central = []; let offset = 0;
+  const d = new Date(), time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  for (const f of files) {
+    const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true); lh.setUint16(10, time, true); lh.setUint16(12, date, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), name, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true); ch.setUint16(12, time, true); ch.setUint16(14, date, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true); ch.setUint16(30, 0, true); ch.setUint16(32, 0, true); ch.setUint16(34, 0, true); ch.setUint16(36, 0, true); ch.setUint32(38, 0, true); ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    offset += 30 + name.length + size;
+  }
+  const cdSize = central.reduce((n, x) => n + x.length, 0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(4, 0, true); end.setUint16(6, 0, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, cdSize, true); end.setUint32(16, offset, true); end.setUint16(20, 0, true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+}
+const fromB64 = (b) => Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
+
+function copyText(text, btn, label) {
+  const done = () => { const old = label || btn.textContent; btn.textContent = 'Copied ✓'; setTimeout(() => (btn.textContent = old), 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => legacyCopy(text, done));
+  else legacyCopy(text, done);
+}
+function legacyCopy(text, done) { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (e) { /* ignore */ } t.remove(); done(); }
+
+$('f').addEventListener('submit', async (ev) => {
+  ev.preventDefault(); $('err').style.display = 'none';
+  const key = $('key').value.trim().replace(/\s+/g, ''), gmail = $('gmail').value.trim(), gpass = $('gpass').value.replace(/\s+/g, '');
+  const oid = $('oid').value.trim().toLowerCase(), oname = $('oname').value.trim(), oemail = $('oemail').value.trim(), opass = $('opass').value;
+  const ref = projectRef($('url').value);
+  if (!ref) return fail('The Project URL should look like https://abcdefghijklmnopqrst.supabase.co (copy it from Supabase, guide Step 1).');
+  const url = `https://${ref}.supabase.co`;
+  const ke = checkKey(key); if (ke) return fail(ke);
+  if ((gmail && !gpass) || (!gmail && gpass)) return fail('For emails, fill in both the Gmail address and its app password. Or leave both empty to skip emails.');
+  if (gmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(gmail)) return fail('The Gmail address does not look right.');
+  if (gpass && !/^[a-z]{16}$/i.test(gpass)) return fail('A Gmail app password is exactly 16 letters (Google shows it in four groups). It is not your normal Gmail password. See guide Step 2.');
+  if (!/^[a-z0-9._@+-]{2,40}$/.test(oid)) return fail('Your login ID must be 2 to 40 letters or numbers, with no spaces.');
+  if (!oname) return fail('Please type your name.');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(oemail)) return fail('Your email address does not look right.');
+  if (opass.length < 8) return fail('Please choose a password of at least 8 characters.');
+  if (/^\d+$/.test(opass)) return fail('Please add some letters to your password. A password made only of numbers is too easy to guess.');
+  if (opass.toLowerCase() === oid) return fail('Your password must not be the same as your login ID.');
+  if (!keys) keys = await makeKeys();
+
+  const pairs = [['CRON_SECRET', keys.cron], ['VAPID_PUBLIC_KEY', keys.pub], ['VAPID_PRIVATE_KEY', keys.priv], ['VAPID_SUBJECT', 'mailto:' + oemail]];
+  if (gmail) pairs.push(['GMAIL_USER', gmail], ['GMAIL_APP_PASSWORD', gpass]);
+  const secrets = pairs.map(([k, v]) => k + '=' + v);
+  const ownerSql = `select setup_owner(${sq(oid)}, ${sq(oname)}, ${sq(oemail)}, ${sq(opass)});`;
+  const sched = SCHEDULE_TEMPLATE.split('YOUR-PROJECT-REF').join(ref).split('YOUR-CRON-SECRET').join(keys.cron).split('YOUR-PUBLIC-KEY').join(key);
+  const config = `// Made by the setup helper. This file connects the website to your database.\nwindow.RB_CONFIG = {\n  SUPABASE_URL: ${JSON.stringify(url)},\n  SUPABASE_KEY: ${JSON.stringify(key)},\n  VAPID_PUBLIC_KEY: ${JSON.stringify(keys.pub)},\n};\n`;
+  const files = Object.keys(SITE_FILES).map((name) => ({ name, data: name === 'config.js' ? new TextEncoder().encode(config) : fromB64(SITE_FILES[name]) }));
+  if (!files.some((f) => f.name === 'config.js')) files.push({ name: 'config.js', data: new TextEncoder().encode(config) });
+  const file = `RAM BHAWAN - MY SECRETS
+Keep this file private. Do not share it.
+Made on: ${new Date().toDateString()}
+
+--- My app login (I am the owner) ---
+Login ID: ${oid}
+Password: ${opass}
+
+--- Supabase ---
+Project URL: ${url}
+Project reference: ${ref}
+Publishable key: ${key}
+Database password (the one I chose when I made the project):
+
+--- Secrets saved in Supabase (Edge Functions > Secrets) ---
+${secrets.join('\n')}
+
+--- Other ---
+My app's web address (Netlify):
+`;
+  made = { file, zip: makeZip(files) };
+  $('o-secrets').value = secrets.join('\n'); $('o-owner').value = ownerSql; $('o-sched').value = sched;
+  const tb = $('secret-table'); tb.textContent = '';
+  for (const [k, v] of pairs) {
+    const tr = document.createElement('tr');
+    const n = document.createElement('td'); n.className = 'n'; const nc = document.createElement('code'); nc.textContent = k; n.appendChild(nc);
+    const nb = document.createElement('td'); const b1 = document.createElement('button'); b1.type = 'button'; b1.className = 'soft tiny'; b1.textContent = 'Copy name'; b1.onclick = () => copyText(k, b1, 'Copy name'); nb.appendChild(b1);
+    const vv = document.createElement('td'); const vc = document.createElement('code'); vc.textContent = v.length > 34 ? v.slice(0, 30) + '…' : v; vv.appendChild(vc);
+    const vb = document.createElement('td'); const b2 = document.createElement('button'); b2.type = 'button'; b2.className = 'soft tiny'; b2.textContent = 'Copy value'; b2.onclick = () => copyText(v, b2, 'Copy value'); vb.appendChild(b2);
+    tr.append(n, nb, vv, vb); tb.appendChild(tr);
+  }
+  $('out').style.display = 'block'; $('out').scrollIntoView({ behavior: 'smooth' });
+});
+
+const download = (name, data, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
+$('dl-site').onclick = () => download('ram-bhawan-website.zip', made.zip, 'application/zip');
+$('dl-secrets').onclick = () => { download('YOUR-SECRETS.txt', made.file, 'text/plain'); saved = true; };
+document.querySelectorAll('[data-copy]').forEach((b) => b.onclick = () => copyText($(b.dataset.copy).value, b));
+window.addEventListener('beforeunload', (e) => { if (keys && !saved) { e.preventDefault(); e.returnValue = ''; } });
+</script>
+</body>
+</html>

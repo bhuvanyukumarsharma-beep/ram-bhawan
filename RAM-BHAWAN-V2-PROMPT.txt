@@ -1,0 +1,596 @@
+RAM BHAWAN, VERSION 2: INSTRUCTIONS FOR CLAUDE CODE
+==============================================================================
+(Note for the owner: put this file in your "for-developers" folder, open Claude
+Code there and type: "Read RAM-BHAWAN-V2-PROMPT.txt in this folder, all of it,
+and do everything it says. Talk to me in simple English." If Claude stops or
+forgets, type: "Read RAM-BHAWAN-V2-PROMPT.txt and V2-PROGRESS.md and carry on.")
+
+You are Claude Code, opened on "for-developers": the full source of the Ram
+Bhawan rent app, version 1. Turn it into version 2. Read ALL of this file first.
+After any restart, re-read it and V2-PROGRESS.md, then continue.
+
+------------------------------------------------------------------------------
+A. THE JOB AND THE RULES
+------------------------------------------------------------------------------
+WHO: The owner of a building of about 15 rented rooms, no caretaker, little
+time. Not a programmer; English is his second language; he types by voice, so
+read slips for their meaning. He cannot read code or errors: report in short,
+plain English (say "the database", "the website", "the update"), no code, say
+what is done, what is next, and whether you need anything from him. This app
+holds real money owed by real tenants: correctness beats speed, never guess
+about money. Running cost must stay Rs 0 (Supabase free, Netlify free, no paid
+services, alerts only by phone notification + email, no WhatsApp/SMS sending).
+"Rs" here means the rupee sign; show money as the app does today (inr() in the
+website, _inr() in SQL).
+
+GOAL: version 1 is live in his own Supabase and Netlify with real data. Deliver
+(1) the 9 changes below, built as 8 features (section C), and (2) a safe update
+for his live app that loses and changes nothing he entered (section D). Hand
+over updated source, a rebuilt "ram-bhawan-app-v2.zip" (made in package/out/)
+and passing tests. You never touch his live accounts.
+
+HIS 9 REQUESTS (shortened) -> where built
+ 1 Previous dues when adding a tenant (tenants lived for years)      -> C1
+ 2 Deleting a bill must remove it from the room page too             -> C2
+ 3 Upload images (Aadhaar) with tenant documents                     -> C3
+ 4 Dark theme plus three more themes to choose from                  -> C4
+ 5 Master-only edit of "rent overdue / rent collected" on Rooms      -> C5
+ 6 Edits must show in the ledger                                     -> C5, C8
+ 7 A "Lodging" tab recording every master change and every
+   approved payment/request                                          -> C8
+ 8 One bill for the whole building each month                        -> C6
+ 9 Share rent/dues with a tenant whenever he wants to remind them    -> C7
+
+RULES
+ 1 Do not ask him to approve a plan; the plan is here. Do set-up, then the order
+   in A3.
+ 2 Section G decisions are settled. For anything else, make the sensible call
+   (simple, safe, free) and note it in V2-PROGRESS.md "Calls I made". Ask him
+   only if truly blocked or if a choice changes how he uses the app and nothing
+   here covers it: one question, 2-3 short choices, your recommendation. His
+   later wishes override this file.
+ 3 The code is the truth. If it differs from this file, adapt and note it under
+   "Differences found".
+ 4 Database work is test-first. Never weaken or delete a test to pass; if a
+   deliberately changed behaviour needs a test change, say why in the progress
+   file.
+ 5 Never break version 1 (B rules 2-3, E2). Old website + new database must work.
+ 6 Small steps. "git init" and commit after each task (or keep dated copies).
+ 7 Keep V2-PROGRESS.md in the root: a [ ]/[x] checklist of the tasks below plus
+   "Calls I made", "Differences found", "What the owner must do", "Open
+   problems". Update after EVERY task.
+ 8 Say something works only after you ran it and saw it pass.
+ 9 Follow existing style: plain-English comments, same naming, two-space indent.
+   Website: React 19 + TypeScript + Vite, phone-first (390 px), no new run-time
+   package, no CSS framework. New screen text: short simple English. Use his
+   words: "Old dues", "Documents", "Share", "Delete", "Lodging".
+10 Never ask for or write his keys, passwords, email or live addresses.
+11 Never hand over a database update that has not passed E1. If tests cannot run
+   here, stop and tell him plainly (H).
+
+A1. SET-UP (before any change)
+ 1 Read: README.md, GUIDE.md, build.sh, all supabase/sql/01..07,
+   supabase/schedule.sql, supabase/functions/notify, app/src, app/index.html,
+   app/public, tests/ and tests/ui, package/ (build.py and templates).
+ 2 Backup the folder to "for-developers-v1-backup"; first git commit.
+ 3 Tools: Node 22; Python 3; PostgreSQL 14+ on 127.0.0.1:54329, user postgres,
+   no password, able to create/drop databases (tests/db.mjs; you may let it read
+   PG* environment variables, keeping those defaults); "npm install" in tests/
+   (pg) and app/; playwright + Chromium for tests/ui; openssl for https walks.
+   Install what is missing the simplest way (for example Docker: docker run -d
+   --name rb-pg -p 54329:5432 -e POSTGRES_HOST_AUTH_METHOD=trust postgres:16).
+   Test scripts are bash using /tmp: on Windows work inside WSL2. Tell him in
+   plain words what you install; if he must click, give exact simple steps.
+ 4 Prove the baseline: in tests/ run node ledger.test.mjs, api.test.mjs,
+   webpush.test.mjs, grants.test.mjs, keys.test.mjs; build the app (cd app; npm
+   install; npm run build); run tests/ui/run_all.sh (also with HTTPS=1). All must
+   pass untouched. Record counts. Fix the environment, never the test.
+ 5 Freeze version 1: copy supabase/setup.sql to tests/fixtures/setup.v1.sql
+   BEFORE editing SQL; its SHA-256 must be
+   ed3a94ca4e3e95c019342ed06bd1aa0c361340bc752f2f6abd677c6dc49e5575
+   (compare ignoring line endings). If it differs, stop and tell him: the update
+   must start from exactly what his live database was built from.
+ 6 Create V2-PROGRESS.md.
+
+A3. ORDER OF WORK (each task ends with tests green)
+ PHASE 1 Database foundations (C0, E1): build.sh makes setup.sql and
+   database-update.sql; tests/upgrade.test.mjs; schema changes; _log,
+   _bill_label, _ledger changes, version marker, wipe/export changes.
+ PHASE 2 Database features, tests first: C1 old dues; C2 delete bill; C8
+   lodging_list + log lines in every data-changing function (features built
+   earlier log their own) and a final sweep of the C10 list; C3 documents; C5
+   payments_month, edit_payment; C6 building_bill; C7 send_reminder; then the
+   whitelist and grants test, and a check that no function name has two
+   overloads. Gate: all suites green.
+ PHASE 3 Website: (1) theme tokens FIRST so all new screens use them; (2) version
+   gate, monthLabel guard, in-app confirmation sheet, route query part,
+   NOTIFYING list, document picker; (3) Rooms boxes; (4) Billing "Bills" and
+   "Payments" views; (5) Room page (buttons, bill card, Documents, History,
+   "+ Old dues", rent tick, move-in form); (6) Share sheet; (7) Lodging tab; (8)
+   Settings, tenant Me, sign-in, Receipt, tenant app, Inbox; (9) walk-throughs and
+   screenshots checked at 390 px in all themes.
+ PHASE 4 Update path and package: database-update.txt, update-helper.html,
+   public/_headers, package/build.py, GUIDE.md and START-HERE.html, developer
+   README.
+ PHASE 5 Final proof: every suite and walk (http and https); build the package,
+   unpack it, run walks against the unpacked website, test the update helper end
+   to end; tick the Definition of Done (F); write PROJECT-NOTES-V2.md; final
+   report (H).
+
+------------------------------------------------------------------------------
+B. VERSION 1 FACTS AND TRAPS
+------------------------------------------------------------------------------
+Business rules (do NOT change): bill = fixed rent + water (rate x persons,
+default Rs 100 each) + electricity ((new - previous reading) x rate, default Rs
+10) - approved deductions. Late interest 24% a year, simple, per day, after the
+due date plus grace days. Part payments allowed; money goes to the bill with the
+earliest due date first, interest before bill; extra becomes advance credit.
+Payment states: pending, approved, rejected, void (screens say "Cancelled").
+Roles: owner, admin ("master access"; both = staff), tenant (sees only own
+room; reports payments, readings, deduction claims, requests, all needing staff
+approval where money is involved). Alerts: Web Push + Gmail through the Edge
+Function "notify" (pg_cron). Every number is derived by _ledger(tenancy, as_of)
+from bills + approved payments; no stored totals. Two screens must never show
+different totals for the same thing.
+
+Technical rules:
+ 1 Security: every table has row level security ON and no policies; all access is
+   through security definer functions taking p_token (_auth/_staff/_owner). The
+   lock-down block at the end of supabase/sql/07_notify.sql grants, by NAME, only
+   whitelisted functions (list after "if f.proname in ("). tests/grants.test.mjs
+   requires the whitelist to equal the functions the website calls (rpc('name')),
+   billing_month allowed as legacy. New website-called function: add to BOTH.
+   Helpers starting with "_" are never granted.
+ 2 "create or replace function" cannot change a return type, and a changed
+   argument list creates a second overload that stays granted by name. Keep every
+   existing name, arguments and return type. Add behaviour through new JSON fields
+   or new function names. Test: no name has two overloads.
+ 3 Parts 02-07 hold only functions + lock-down, so they are re-runnable. Part 01
+   (tables) is not. Never put table creation or data inserts in 02-07.
+ 4 Attachments are base64 data URLs in attachments(data). _save_photo accepts
+   data:image/ up to 900,000 characters. get_attachment refuses tenants for files
+   they did not upload.
+ 5 Website: static, hash routing, Netlify. public/config.js holds each owner's
+   three public values and is replaced per owner by the helpers. public/sw.js
+   does no caching: keep it so.
+ 6 Tests freeze _today() to 2026-11-04. Free tiers: database 500 MB (photos and
+   documents are what can fill it).
+
+------------------------------------------------------------------------------
+C. THE SPECIFICATION
+------------------------------------------------------------------------------
+C0. FOUNDATIONS
+Version marker: app_settings.schema_version int not null default 2 (add column
+if not exists). public_info() and _settings_json() return it as
+"schema_version" (version 1 returns nothing = 1). Website, FIRST, before sign-in
+or any new call: if version < 2 show a full-screen notice and stop. Staff: "Your
+app needs a one-time database update. Open the update helper (guide, 'Updating
+from version 1')." Tenants/sign-in: "The app is being updated. Please try again
+later." Settings shows "App version 2"; app/package.json version 2.0.0.
+
+Schema changes, idempotent, in supabase/upgrade/01_schema_delta.sql AND in the
+same final shape in 01_schema.sql (new columns at the END of each CREATE TABLE):
+ - bills.kind text not null default 'regular' check (kind in
+   ('regular','previous'))
+ - drop constraint bills_tenancy_id_month_key if exists; create partial unique
+   index bills_one_regular_per_month on bills (tenancy_id, month) where kind =
+   'regular'
+ - payments: edited_at timestamptz, edited_by uuid references users(id) on
+   delete set null, edit_note text
+ - new tables audit_log (C8) and tenant_documents (C3), RLS on, no policies
+ - wipe_everything_except_owner also clears them, then writes one line "All test
+   data was deleted"; export_all also exports audit_log and the document list
+   (no file contents; owner-only as today).
+
+_ledger (supabase/sql/02_engine.sql): the ONLY money-engine edits:
+ (a) The value feeding array b_start (today b.month) becomes case when b.kind =
+     'previous' then b.due_date else b.month end. Why: old dues use the sentinel
+     month 1900-01-01; without this they would exist since 1900, eat payments
+     dated before their "owed since" date, show in earlier "as on" views and
+     reprinted receipts. With it, such a payment waits as advance credit and is
+     used the day the old dues start.
+ (b) Each bill and each entry of a payment's 'applied' list carries 'kind'.
+ (c) 'awaiting_reading' = b.kind = 'regular' and b.new_reading is null.
+ (d) Each adjustment carries 'by' (name of created_by) and 'at' (created_at).
+ (e) Each payment carries 'edited_at' and 'edit_note'.
+ _tenancy_view with p_staff = false removes 'by': a tenant never learns which
+ master did something (test it).
+
+Labels: SQL _bill_label(month, kind) returns 'Old dues' or to_char(month,
+'FMMonth YYYY'); use it wherever SQL writes bill text. Website monthLabel and
+monthShort return 'Old dues' for the sentinel: nothing may ever print "January
+1900".
+
+Update SQL: build.sh makes supabase/setup.sql (parts 01-07; shipped as
+database.txt) and supabase/database-update.sql (delta, then parts 02-07; shipped
+as database-update.txt). Both end with the same lock-down. The update has no
+begin/commit (Supabase runs the text as one unit: any failure changes nothing),
+nothing that cannot run in a transaction, a short plain-English header ("run once;
+safe to run again"), and ends with: notify pgrst, 'reload schema';
+
+C1. OLD DUES (request 1)
+Representation: a bill with kind='previous', month=1900-01-01, rent=amount,
+persons=0, water_rate=water=prev_reading=elec_rate=electricity=0, new_reading
+null, note=owner's text, due_date="owed since" or (blank) the day entered,
+interest_waived=true when blank. Several per tenant allowed. With a date the
+normal interest rule applies; without, no interest (owner can edit later). Money
+still goes to the earliest due date first: dated old dues are normally paid
+first; undated ones count as due the day entered, so after earlier-due bills. The
+form says this in one line.
+Interest preview: while typing "owed since", show e.g. "Late interest so far would
+be Rs 1,240 (24% a year). Leave the date empty for no interest." Uses current rate
+and grace days; write it as a small pure function and test it against _ledger.
+Entry: (a) move-in form: repeatable "Old dues" rows (amount, note, owed since), up
+to 12; move_in reads p_fields->'old_dues' (no signature change), same
+transaction. (b) "+ Old dues" button beside "+ Add a bill" on the room page ->
+new add_old_dues(p_token, p_tenancy, p_amount, p_note, p_since) returning the
+bill id. Both use internal _add_old_dues.
+Validation: amount >0 and <=10,000,000; since not in the future, not before
+2000-01-01; note <=200 characters.
+Edit/delete as any bill; the edit sheet shows only amount, note, owed since,
+"do not charge interest". Display: card titled "Old dues" with note and date, one
+"Amount" row; same in the tenant app; receipts and payment rows say "Old dues"
+where a month goes.
+Reminders (generate_reminders): old dues never get meter-reading or "due in N
+days" reminders; they get overdue reminders (days 1, 3, 7, then weekly) worded
+"Old dues of Rs X are still unpaid" (plus "plus late interest Rs Y" only when
+interest is on).
+Make kind-aware and test: decide_deduction (default = latest REGULAR bill; say
+"create the bill first" if none; he may still pick old dues by hand); inbox (bill
+list carries kind); submit_reading (refuse non-regular); rooms_overview ("No bill
+yet" = no REGULAR bill); verify _create_bill, billing_month, _inbox_count,
+export_all, wipe; website uses of monthLabel, monthShort and monthOf
+(app/src/screens/parts.tsx). Finish by searching "bills" and JSON "month" in
+supabase/sql and app/src.
+Lodging line: "Added old dues Rs 4,000 (Aug to Oct rent) for Suresh, Room 101,
+owed since 1 Sep 2026".
+
+C2. DELETE A BILL (request 2)
+delete_bill(p_token, p_bill) keeps signature and void return. New: snapshot first
+(room, tenant, month or "Old dues", total, adjustments, reading entered?, rupees
+paid against it) and write the Lodging line; for adjustments from an approved
+deduction claim mark the claim 'rejected', clear its approved amount, append
+"(removed because the bill was deleted)" like delete_adjustment does; then delete.
+There is one copy of a bill, so it vanishes from Billing, the room page, the
+tenant app and the Rooms boxes at the next load. Add the missing test: gone from
+room_detail, tenancy_detail, tenant_home, rooms_overview, building_bill.
+UI: a visible danger "Delete" button among the bill's actions (remove the red one
+from the edit sheet). It opens an in-app confirmation sheet (NOT window.confirm)
+saying: the bill and total; "payments already made stay and are re-applied to the
+other bills"; "the meter reading entered for this bill is removed" (only if there
+is one); "approved deductions on this bill (Rs X) are removed" (only if any); for
+a regular bill "if you press Create bills for all rooms for this month later, a
+new bill will be made for this room again". Buttons "Delete bill" and "Keep it".
+The same sheet replaces the other two confirm() uses (remove a deduction line,
+switch a login off). Payments are never deleted; surplus becomes advance credit.
+Only "Create bills for all rooms" (or the daily run, which fills only months with
+no bill) can recreate a deleted bill.
+
+C3. TENANT DOCUMENTS (request 3)
+Table tenant_documents(id uuid pk, tenancy_id uuid not null references
+tenancies(id) on delete cascade, title text not null, attachment_id uuid not null
+references attachments(id) on delete cascade, mime text not null, size_kb int not
+null, added_by uuid references users(id) on delete set null, created_at timestamptz
+default now()).
+Staff-only functions: tenant_documents_list(p_token, p_tenancy) (metadata only,
+plus total size of all documents), add_tenant_document(p_token, p_tenancy,
+p_title, p_data), delete_tenant_document(p_token, p_doc) (also deletes the
+attachment), storage_info(p_token) (database size). Viewing uses get_attachment
+(tenants already refused; add a test that a tenant can neither list nor fetch).
+_save_document: data:image/jpeg|png|webp or data:application/pdf; images <= ~800
+KB, PDFs <= ~1.5 MB (after base64; enforced in SQL and with a friendly message in
+the browser); title required <=80 chars; max 10 per tenancy.
+Browser: photos go through the existing compressor with larger size (long side up
+to 1600 px, quality loop down to ~800 KB) so an Aadhaar stays readable; PDFs as
+they are; camera or gallery. Title chips: Aadhaar front, Aadhaar back, Agreement,
+Photo, Other (free text).
+Move-in form: "Documents (optional)" under "ID proof note": add photo or PDF, list
+with editable title and remove. After move_in succeeds files upload one by one
+with progress; if one fails the tenant still exists and the screen names the
+failed files and offers retry.
+Tenant page: "Documents" card (thumbnails or PDF icon; images open full screen;
+PDFs in a new tab from a blob URL; "+ Add"; delete via the confirmation sheet;
+note "Only masters can see these. Keep Aadhaar copies only if the tenant agrees.").
+Settings space meter: "Space used: about 38 MB of 500 MB (documents 12 MB)",
+warning above 80%. Lodging lines for add/delete. Backup has no file contents (the
+guide says so).
+
+C4. THEMES (request 4)
+Replace every hard-coded colour in styles.css and inline styles with CSS
+variables: page background, surface, raised surface, text, muted text, border,
+primary, primary text, primary soft, input background, focus ring, shadow, overlay,
+status families ok/warn/bad (text + background tones) and the "due"/"empty" room
+tones. Five sets via data-theme on <html>: classic (today's look, default), dark,
+ocean (blue), sand (cream/brown), violet. Classic is unchanged except three tiny
+text nudges to pass 4.5:1 (muted text 4.49, green badge text 4.33, inactive tab
+4.06); its borders stay. Status colours keep their meaning in every theme
+(green paid, amber due soon, red overdue, grey empty); brand colours avoid
+green/amber/red. Picker (five named swatches, instant preview) in Settings, tenant
+"Me" and the sign-in page; stored in localStorage (try/catch); a tiny inline
+script in index.html applies it before paint and updates <meta name="theme-color">.
+Print is always light. Test: in all five themes text on each surface and each
+status tone >= 4.5:1, focus rings >= 3:1; in the four NEW themes also control
+outlines (inputs, selects, outlined buttons) >= 3:1 (Classic keeps today's
+outlines, card edges and dividers exempt). Screenshot Rooms, a room page, Billing,
+Settings, tenant home in each theme and look at them yourself.
+
+C5. FIXING THE ROOMS BOXES (requests 5 and 6)
+The three boxes (To collect, Rooms overdue, Collected this month) stay DERIVED;
+he taps one, sees the records behind it, and corrects them (he confirmed). They
+become buttons: To collect -> Billing "Bills" filter Unpaid; Rooms overdue ->
+Billing "Bills" filter Overdue; Collected this month -> Billing "Payments" for
+the current month. Billing has two views, Bills (C6) and Payments, sharing one
+month navigator. Routes like #/billing?v=payments&m=2026-11&f=overdue; the route
+reader must ignore the query part when matching the page.
+payments_month(p_token, p_month): every payment dated in that month (approved,
+pending, rejected, cancelled) with room, tenant, amount, method, reference,
+receipt number, status, who decided, edit info, plus the approved total. For the
+current month the total must equal the "Collected this month" box (approved,
+paid_on from the 1st to today): test it.
+Master actions per payment: Correct, Cancel (void_payment), View receipt, Share
+receipt; a pending one shows "Open in Inbox"; cancelled/rejected are read-only.
+edit_payment(p_token, p_payment, p_fields jsonb, p_reason text): amount, date,
+method, reference, note; approved payments only; reason required; use
+_check_payment; refuse a no-change call; set edited_at/by/note. Lodging keeps old
+and new values. Payment row and receipt show "Corrected on 14 Nov: reason"
+(tenants see it too); receipt number never changes. The tenant is alerted (like
+void_payment): add edit_payment to NOTIFYING in app/src/lib/api.ts.
+"Adjust dues": a visible button on the room's top card opens the existing
+deduction/charge sheet with a bill picker (default oldest unpaid), "Subtract" or
+"Add", and a required reason; adjustment lines show "by Rakesh - 14 Nov" (masters
+only); the sheet says interest is recalculated from the due date. Uses
+add_adjustment/delete_adjustment.
+Monthly rent stays in "Edit details" (applies to bills made from then on); add a
+tick "Also change this month's bill if it is unpaid" calling update_bill.
+All logged (C8), staff-only; tenants cannot call any of it (test).
+
+C6. BUILDING BILL (request 8): Billing, "Bills" view
+building_bill(p_token, p_month date, p_as_of date default null): one row per
+ACTIVE tenancy that started before month end, plus a "Vacant" row per empty room.
+Each row = the month's regular bill + the tenant's position as of p_as_of
+(default today), all from _ledger(tenancy, as_of). The as-on date is raised to the
+1st of the viewed month if earlier; return the date really used.
+Columns: Room, Tenant, Rent, Water, Electricity, Other (adjustments), This month
+(bill total), Interest (this bill), Paid (against this bill), Other dues (still
+owed incl. late interest on other bills: earlier months, old dues), To pay (tenant
+total outstanding). Identity: This month + Interest - Paid + Other dues = To pay.
+Advance credit with nothing due shows "Advance Rs X"; no bill shows "No bill yet"
+(Other dues and To pay still shown); a bill missing its reading is flagged.
+Totals row and summary line: rooms billed of total, vacant, readings missing, total
+to collect. Top: month navigator; "as on" date; the existing "Create bills for all
+rooms" button and message; chips All, Unpaid, Overdue, No bill, each looking at the
+tenant's WHOLE position: Unpaid = total to pay > 0; Overdue = any bill (this
+month, earlier or old dues) overdue; No bill = no regular bill for the viewed
+month. So Overdue lists exactly the rooms in the "Rooms overdue" box and Unpaid's
+To-pay total equals "To collect". "Print / Save as PDF": print stylesheet A4
+landscape, light, no navigation, heading with building name, month, "as on" date.
+Tap a row opens the room; a Share button on rows that owe money. On a phone: a
+horizontally scrolling table with Room/Tenant fixed on the left, totals visible.
+Masters only. Bulk creation is unchanged. The old billing_month stays only for the
+old website. Tests: column sums equal per-room _ledger sums; identity per row;
+Unpaid total = "To collect"; Overdue rooms = "Rooms overdue" (incl. late only on old
+dues/earlier month, and no bill yet); early as-on raised.
+
+C7. SHARE AND REMIND (request 9)
+Free, manual, from his own phone; no automatic WhatsApp/SMS. "Share" button on the
+room's top card, each bill card, each owing row of the building bill; "Share
+receipt" on payment rows. Sheet: an editable message built in the browser from
+loaded data: greeting with first name and building; room; month; Rent + Water +
+Electricity = bill; earlier dues (with late interest); paid so far; total to pay as
+on today; due date or "overdue by N days"; UPI ID if set; app link if saved.
+Example: "Hello Suresh, a reminder from Ram Bhawan. Room 101, November 2026: Rent
+Rs 4,000 + Water Rs 200 + Electricity Rs 350 = Rs 4,550. Earlier dues Rs 1,200
+(including late interest Rs 150). Paid so far Rs 1,000. Total to pay: Rs 4,750 as
+on 14 Nov. Pay by UPI to rambhawan@upi, or cash. Your account: https://..."
+Buttons: WhatsApp (wa.me/<number>?text=...), Text message (sms: link, handle
+iPhone/Android), Share (phone share menu if present), Copy, "Send app alert +
+email". WhatsApp/Text disabled with a hint if no phone number. Numbers cleaned to
+digits; 10 digits get 91; a leading 0 is dropped.
+send_reminder(p_token, p_tenancy, p_channel text default 'app'), staff only,
+channel app|whatsapp|sms|share|copy. app: tenant needs a login; creates one
+notification (kind 'reminder', link to tenant home) with amount due and late
+interest; refuses a second within 30 minutes; add send_reminder to NOTIFYING.
+Other channels only write the Lodging line ("opened WhatsApp for", not "sent").
+"Reminded 2 days ago (WhatsApp)" shows on the room's top card and building bill
+rows, from the latest reminder.* line.
+
+C8. LODGING (request 7, and "show in ledger" of 6)
+Table audit_log: id bigint generated always as identity; at timestamptz default
+now(); actor_id uuid references users on delete set null; actor_name, actor_role
+(snapshots; null actor = "Automatic"); action text (code); group_name text
+(payments, bills, tenants, settings); summary text (the sentence); room_no,
+tenant_name (snapshots); tenancy_id uuid (no foreign key); details jsonb
+(before/after). Indexes (at desc, id desc) and (tenancy_id, at desc). Nothing
+updates or deletes lines; only the wipe function clears the table.
+_log(...) internal helper fills snapshots; call it inside EVERY function that
+changes data or decides a request, in the same transaction. English sentences with
+_inr amounts and names; never passwords or keys.
+Recorded actions: payment.requested, .approved ("Approved Rs 5,000 UPI from Suresh
+(Room 101), receipt RB-2611-0004", noting "reported Rs 5,500, confirmed Rs 5,000"),
+.rejected (reason), .recorded, .corrected ("amount Rs 3,000 to Rs 3,500, date 2 Nov
+to 3 Nov. Reason: typed wrong"), .voided; claim.requested/.approved/.rejected;
+reading.sent/.checked; ticket.created/.updated; bill.created, bill.bulk_created
+(ONE line with count), bill.auto_created (daily run, actor Automatic, only if
+something was made), bill.edited (changed fields before/after), bill.deleted,
+dues.added, adjustment.added/.removed; tenant.moved_in/.edited (before/after)/
+.moved_out/.login_created/.password_reset; document.added/.deleted; room.added/
+.edited; reminder.app/.whatsapp/.sms/.share; settings.changed (each setting before/
+after, e.g. "late interest 24% to 18%"); team.added/.switched_off/.switched_on/
+.password_reset; backup.downloaded; data.wiped. NOT recorded: sign-ins, reads,
+tenants' own profile/password changes, automatic reminder alerts, viewing a
+document.
+lodging_list(p_token, p_limit int default 50, p_before bigint default null,
+p_group text default null, p_tenancy uuid default null, p_q text default null)
+returns {rows, more}; staff only; newest first.
+Screen: new "Lodging" tab (bottom bar: Rooms, Inbox, Billing, Lodging, Settings);
+rows grouped Today, Yesterday, dates: time, who, sentence, room chip; tap for
+before/after; chips All, Payments, Bills, Tenants, Settings; room filter; search;
+"Show older". A "History" tab on a tenant's page uses p_tenancy; with the inline
+marks (adjustments with who/when, "Corrected" payments, old dues bills) this is
+where edits show in the ledger. Visible to ALL masters; tenants never see Lodging
+or master names; no line can be edited or deleted.
+
+C9. SMALL THINGS: Settings (version, space meter, theme picker); Rooms welcome
+step 3 mentions "Old dues"; the old Delete button inside the edit sheet is removed.
+
+C10. CHECKLIST
+NEW website-called, staff-only, on the whitelist: lodging_list, add_old_dues,
+building_bill, payments_month, edit_payment, tenant_documents_list,
+add_tenant_document, delete_tenant_document, send_reminder, storage_info. NEW
+internal: _log, _bill_label, _add_old_dues, _save_document.
+CHANGED (same signatures): _ledger, _tenancy_view, public_info, _settings_json,
+rooms_overview, save_room, move_in, save_tenancy, move_out, create_bills, add_bill,
+update_bill, delete_bill, add_adjustment, delete_adjustment, record_payment,
+decide_payment, void_payment, decide_deduction, update_ticket, inbox, export_all,
+submit_reading, report_payment, claim_deduction, create_ticket, receipt,
+update_settings, add_admin, set_user_active, reset_password, create_tenant_login,
+wipe_everything_except_owner, generate_reminders. Each one that changes data writes
+its Lodging line.
+WEBSITE: RoomsHome, Billing (rewritten), new Lodging, StaffApp, RoomPage, parts,
+Receipt, Inbox, Settings, TenantApp, Login, ui/kit, lib/format, lib/api,
+a theme helper, styles.css, index.html, public/_headers.
+
+------------------------------------------------------------------------------
+D. UPDATING HIS LIVE APP
+------------------------------------------------------------------------------
+Ships in ram-bhawan-app-v2.zip: START-HERE.html, setup-helper.html (new website),
+update-helper.html (NEW), database.txt, database-update.txt (NEW),
+notify-function.txt (unchanged), READ-ME-FIRST.txt, for-developers/.
+His two steps (guide section "Updating from version 1", at the top): (1) download a
+backup (Settings, Backup); open update-helper.html; Copy the database update; paste
+in the Supabase SQL Editor; Run; expect "Success. No rows returned". (2) In the
+helper paste his app's current config.js (open <his app>/config.js, select all,
+copy), press "Make my website file", drag the zip onto Deploys in Netlify; Settings
+should say "App version 2".
+The helper MUST NOT make new keys. The three config.js values (project URL,
+publishable key, phone-alert public key) stay byte for byte, or phone alerts stop.
+It checks all three are present and not placeholders (source placeholders start with
+"PASTE-") and refuses a wrong paste in plain words. A page from his own computer
+cannot read another site's file, hence the paste. The new website ships
+public/_headers allowing other pages to read /config.js (public values only), so
+later updates can fetch it from his typed app address; paste stays as fallback.
+Build it from package/helper.template.html and build.py as a new template; reuse the
+embedding and zip-writer code. The Edge Function, secrets and schedule are not
+touched (cron calls generate_reminders by name).
+Safety: the update is additive and one script; old website + new database works;
+new website + old database shows the update screen, so either order is fine;
+rollback = re-upload the old website zip.
+
+------------------------------------------------------------------------------
+E. TESTS (all must pass)
+------------------------------------------------------------------------------
+E1 tests/upgrade.test.mjs: load the frozen version 1 database; with version 1
+   functions build realistic data (rooms, tenants, bills, part payments, interest,
+   claims, tickets, a reading, a tenant login); record every tenant's _ledger at a
+   fixed date; apply database-update.sql; ledgers must be IDENTICAL and all rows
+   survive; apply it again (safe); compare with a fresh setup.sql: same tables,
+   columns (name, type, default, nullability), constraints, indexes, function
+   signatures (no double overloads), grants.
+E2 Old website vs new database: unchanged version 1 assertions in api.test.mjs pass;
+   billing_month works.
+E3 New API tests per feature: C1 (with/without date, preview = ledger, several
+   rows, validation, move-in all-or-nothing, payment order, early payment waits as
+   credit, early as-on and receipt ignore old dues, reminder wording, no "January
+   1900", submit_reading refusal, decide_deduction default, "No bill yet"); C2
+   (gone everywhere, claims, readings, payments re-applied, log, bill recreatable);
+   C3 (types, sizes, staff only, tenant cannot list/fetch, storage_info); C5
+   (edit_payment rules, tenant alert, receipt note, adjustments by/at hidden from
+   tenants, payments_month = box); C6 (sums, identity, = "To collect", chips, past
+   as-on, vacant); C7 (with/without login, 30-minute limit, log); C8 (every action
+   writes a correctly worded line, paging, filters, tenants get nothing, lines
+   immutable, wipe clears new tables).
+E4 grants.test.mjs updated (new whitelist, billing_month legacy, audit_log and
+   tenant_documents unreachable, RLS on every table).
+E5 Contrast test (C4) and theme screenshots.
+E6 Phone-size browser walks (tests/ui): owner adds a tenant with old dues and
+   documents (image + PDF), deletes a bill, corrects a payment, adjusts dues, opens
+   the three boxes, builds and prints the building bill (print emulation + PDF),
+   shares (check WhatsApp/SMS links and text), reads Lodging and History, switches
+   themes; tenant sees old dues and a corrected payment but NO documents/Lodging;
+   the "update needed" screen; the update helper end to end (paste path, wrong paste
+   refused, automatic fetch) then walks against the website unpacked from its zip
+   (tests/ui/site_from_helper.mjs). LOOK at screenshots; fix cut-off text, sideways
+   scroll, unreadable colours.
+E7 Every version 1 test and walk still passes; the package builds.
+
+------------------------------------------------------------------------------
+F. GUIDE, PACKAGE, NOTES, DEFINITION OF DONE
+------------------------------------------------------------------------------
+Update GUIDE.md (master) and regenerate START-HERE.html: "Updating from version 1"
+at the top; Step 10c/10d (old dues, Documents); daily use (Building bill, Share,
+corrections and Adjust dues, Delete bill, Lodging, themes); how money is worked out
+(old dues); troubleshooting (update problems, "database update needed"); new
+screenshots; say the backup has no document files. Simple English, short steps.
+package/build.py: builds database-update.txt and update-helper.html, names the zip
+ram-bhawan-app-v2.zip, folder inside "ram-bhawan/", for-developers complete without
+node_modules/dist/out. Update the developer README (install and run tests, incl.
+Playwright). Write PROJECT-NOTES-V2.md (what changed, why, section G, how to update)
+for him to paste into his Claude Project.
+DONE WHEN: all 9 requests work on a phone-size screen for owner/masters and tenants
+see only their own; upgrade test passes (ledgers identical, re-runnable, equals fresh);
+old website + new database and new website + old database both behave; no double
+overloads, whitelist = what the website calls, new tables unreachable from outside; a
+tenant cannot see documents, Lodging, master names or others' data; Rooms boxes,
+Bills view and Payments view agree; no "January 1900" and no window.confirm anywhere;
+every master action and approval writes an unalterable Lodging line; contrast test
+passes in five themes; all old and new tests and walks pass (http and https); the v2
+zip is built, unpacked and checked and the helper keeps config.js byte for byte; guide
+and notes updated; still Rs 0 and no new run-time package; V2-PROGRESS.md complete and
+truthful.
+
+------------------------------------------------------------------------------
+G. SETTLED DECISIONS (the owner may overrule any)
+------------------------------------------------------------------------------
+ 1 Lodging is visible to the owner and all masters; nobody can edit or delete lines.
+ 2 Every master can do everything here, including deleting bills and correcting
+   payments; only the owner downloads the backup.
+ 3 Dated old dues earn normal interest from that date; undated ones are due the day
+   entered, earn none, and are paid after earlier-due bills; an earlier "owed since"
+   makes them be paid first.
+ 4 Tenants with a login get the overdue reminders for old dues (1, 3, 7 days, then
+   weekly), worded "Old dues".
+ 5 Tenants are alerted when a payment is cancelled or corrected, not for other
+   changes, and never see which master acted.
+ 6 Documents: photos <= ~800 KB, PDFs <= ~1.5 MB, 10 per tenant, masters only;
+   Settings shows space used of 500 MB.
+ 7 Share messages are English, editable; 91 assumed for 10-digit numbers.
+ 8 A deleted bill returns only if "Create bills for all rooms" is pressed again.
+ 9 The first update needs one extra copy-and-paste (config.js).
+10 Ocean, Sand, Violet and all theme colours are your picks; the theme is remembered
+   per phone/browser.
+11 Deleting a bill with an approved deduction marks that claim "removed because the
+   bill was deleted". 12 Only approved payments can be corrected (a waiting one is
+   corrected while approving it). 13 Payments view lists approved, waiting, not
+   confirmed, cancelled; only approved are totalled. 14 One app alert + email
+   reminder per tenant per 30 minutes. 15 Building bill lists tenants living there now
+   plus vacant rooms; moved-out tenants are not in it or in "To collect" (as today);
+   as-on date is any date from the 1st of the viewed month. 16 Billing replaces the
+   old per-room month list. 17 "Edit rent overdue / collected" = the three Rooms
+   boxes (confirmed). 18 Pop-up confirm boxes become in-app sheets. 19 Classic keeps
+   today's look. 20 Old dues start counting on their due date. 21 Building-bill chips
+   use the tenant's whole position.
+NOT in this update: automatic WhatsApp/SMS, typing over the Rooms boxes, Hindi
+templates, tenant-visible Lodging, bulk delete or undo of bills, any change to
+billing formulas or the interest rule, Supabase Storage or any paid service.
+Your call: exact colours and token names, screen layouts, helper names, Lodging
+wording beyond the examples, how the helper checks config.js, print details, task
+order inside a phase, test data.
+
+------------------------------------------------------------------------------
+H. TALKING TO THE OWNER
+------------------------------------------------------------------------------
+First message: one or two plain sentences on what you will do; then start. After each
+phase: 3-5 short lines (done, next, "nothing needed from you" or exactly what you
+need). If he must click or install, give exact simple steps, one at a time; ask him to
+type a command only if unavoidable, with the exact line. Never hide a failing test.
+FINAL MESSAGE (about 250 words, plain English): version 2 is ready and tested (how
+many checks passed); nine short lines, one per request, in his words; his two update
+steps and where the files are; five quick things to try on his phone; what to know
+(section G items 1-10 in one line each, anything unfinished).
+IF YOU CANNOT FINISH: say exactly what is done and not. If the database tests cannot
+run here, say so, hand over NO update, and tell him he can bring this file back to
+the Claude chat where it was written to have it built and tested there. If only the
+browser walks cannot run, say the screens are untested and he should check them on
+his own phone before using them with tenants.
+
+Start with A1 now.

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ram Bhawan setup guide</title>
+<style>
+  :root{--ink:#1d2433;--muted:#5d6675;--line:#e1dccf;--brand:#0f4c4a;--brand2:#17706c;--bg:#f6f3ec;--card:#fff;
+    --tipbg:#e3f3ea;--tipfg:#124d2d;--infobg:#e4eef9;--infofg:#173f6b;--warnbg:#fdecc8;--warnfg:#6b3f00;--code:#f1eee5}
+  @media (prefers-color-scheme: dark){:root{--ink:#e8ebf0;--muted:#a3acb9;--line:#39414f;--brand:#52bdb6;--brand2:#3aa39d;--bg:#12161c;--card:#1b212b;
+    --tipbg:#173325;--tipfg:#b5e6c8;--infobg:#16293f;--infofg:#b9d6f5;--warnbg:#3a2d12;--warnfg:#f3d79a;--code:#161b23}}
+  *{box-sizing:border-box}
+  html{scroll-padding-top:64px}
+  body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  #progress{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;padding:10px 16px;font-weight:700;font-size:15px;
+    background-image:linear-gradient(90deg,rgba(255,255,255,.28) var(--p,0%),transparent var(--p,0%))}
+  main{max-width:780px;margin:0 auto;padding:18px 16px 90px}
+  h1{font-size:32px;line-height:1.2;margin:.5em 0 .4em}
+  h2{font-size:25px;line-height:1.25;margin:2.1em 0 .5em;padding-top:.9em;border-top:2px solid var(--line);display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
+  h2.is-done{opacity:.55}
+  h3{font-size:20px;margin:1.6em 0 .3em;color:var(--brand)}
+  p,li{max-width:70ch}
+  li{margin:.35em 0}
+  a{color:var(--brand2)}
+  strong{font-weight:700}
+  code{background:var(--code);padding:1px 6px;border-radius:6px;font:.88em ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+  pre{background:var(--code);padding:44px 14px 12px;border-radius:12px;overflow:auto;position:relative;font-size:15px;line-height:1.45}
+  pre code{background:none;padding:0}
+  pre .cp{position:absolute;top:6px;right:6px;font:600 13px system-ui;border:0;background:var(--brand);color:#fff;border-radius:8px;padding:5px 10px;cursor:pointer}
+  table{border-collapse:collapse;width:100%;font-size:16px;margin:1em 0;background:var(--card);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}th{background:var(--code)}
+  blockquote{margin:1em 0;padding:10px 16px;border-left:5px solid var(--brand2);background:var(--card);border-radius:0 12px 12px 0}
+  blockquote p{margin:.3em 0}
+  .admonition{border-radius:14px;padding:6px 16px 8px;margin:1.1em 0;font-size:17px}
+  .admonition-title{font-weight:800;margin:.5em 0 .1em}
+  .admonition.tip{background:var(--tipbg);color:var(--tipfg)}
+  .admonition.info{background:var(--infobg);color:var(--infofg)}
+  .admonition.warning{background:var(--warnbg);color:var(--warnfg)}
+  .admonition p,.admonition li{max-width:none}
+  details{background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:2px 14px;margin:8px 0}
+  details>summary{cursor:pointer;font-weight:700;padding:10px 0}
+  details[open]>summary{border-bottom:1px solid var(--line);margin-bottom:6px}
+  label.done{font-size:15px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+  label.done input{width:20px;height:20px;vertical-align:-4px;accent-color:var(--brand2)}
+  nav.toc{background:var(--card);border-radius:14px;padding:6px 18px;margin:1.2em 0;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+  nav.toc ol{margin:.5em 0;padding-left:1.3em}nav.toc li{margin:.2em 0;font-size:16px}
+  .shots{display:flex;gap:14px;overflow-x:auto;padding:6px 2px 14px;margin:1em 0}
+  .shots figure{margin:0;flex:0 0 auto;width:210px}
+  .shots img{width:210px;height:auto;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.25);display:block}
+  .shots figcaption{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.35}
+  @media print{#progress,label.done,.cp{display:none!important}body{background:#fff;color:#000;font-size:14px}details{border:0}details>*{display:block}h2{break-after:avoid}}
+</style>
+</head>
+<body>
+<div id="progress" role="status"></div>
+<main>
+__TOC__
+__BODY__
+</main>
+<script>
+(function () {
+  var KEY = 'rb-guide-done-v1', done = {};
+  try { done = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+  var steps = Array.prototype.slice.call(document.querySelectorAll('h2[id^="step-"]')), bar = document.getElementById('progress');
+  function paint() { var n = steps.filter(function (h) { return done[h.id]; }).length; bar.textContent = 'Ram Bhawan setup: ' + n + ' of ' + steps.length + ' steps done'; bar.style.setProperty('--p', (100 * n / steps.length) + '%'); }
+  steps.forEach(function (h) {
+    var l = document.createElement('label'); l.className = 'done'; var c = document.createElement('input'); c.type = 'checkbox'; c.checked = !!done[h.id];
+    c.onchange = function () { done[h.id] = c.checked; try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (e) {} h.classList.toggle('is-done', c.checked); paint(); };
+    l.appendChild(c); l.appendChild(document.createTextNode(' Done')); h.appendChild(l); h.classList.toggle('is-done', c.checked);
+  });
+  paint();
+  Array.prototype.forEach.call(document.querySelectorAll('pre'), function (pre) {
+    var b = document.createElement('button'); b.className = 'cp'; b.type = 'button'; b.textContent = 'Copy';
+    b.onclick = function () { var t = (pre.querySelector('code') || pre).innerText.trim(); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { b.textContent = 'Copied ✓'; }, function () { var r = document.createRange(); r.selectNodeContents(pre.querySelector('code') || pre); var s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = 'Press Ctrl+C'; }); setTimeout(function () { b.textContent = 'Copy'; }, 1800); };
+    pre.appendChild(b);
+  });
+})();
+</script>
+</body>
+</html>
